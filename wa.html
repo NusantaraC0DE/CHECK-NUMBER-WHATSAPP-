@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cek WA Terdaftar</title>
+<style>
+ body{font-family:system-ui;background:#111;color:#fff;padding:16px;max-width:600px;margin:auto}
+ .row{display:flex;gap:8px;margin-top:12px}
+ input{flex:1;padding:14px;border-radius:12px;background:#1e1e1e;color:#fff;border:1px solid #333;font-size:16px}
+ .btn{padding:14px 18px;border-radius:12px;border:none;background:#25D366;font-weight:bold;color:#000}
+ .btn2{width:100%;margin-top:10px;background:#222;color:#fff;border:1px solid #333;padding:14px;border-radius:12px}
+ .card{background:#1e1e1e;border:1px solid #333;border-radius:12px;padding:12px;margin-top:10px}
+ .terdaftar{color:#25D366;font-weight:bold} .tidak{color:#ff5a5a;font-weight:bold} .loading{color:#ffcc00}
+</style>
+</head>
+<body>
+<h2>📱 Cek WA Terdaftar Beneran</h2>
+<small>Ketik asal pun bakal ketauan kalau gak ada WA-nya</small>
+
+<div class="row">
+  <input id="nomorInput" type="tel" placeholder="08xxxx">
+  <button class="btn" onclick="tambah()">TAMBAH</button>
+</div>
+<button class="btn2" onclick="pasteBanyak()">📋 PASTE BANYAK</button>
+<button class="btn2" style="background:#25D366;color:#000" onclick="cekReal()">🔍 CEK TERDAFTAR / TIDAK</button>
+
+<div id="hasil"></div>
+
+<script>
+let listNomor=[];
+function bersihkan(n){let c=n.replace(/\D/g,'');if(!c)return'';if(c.startsWith('0'))c='62'+c.slice(1);if(c.startsWith('8'))c='62'+c;return c;}
+function tambah(){
+  let inp=document.getElementById('nomorInput');
+  inp.value.split(/[\n,; ]+/).forEach(v=>{let c=bersihkan(v);if(c&&!listNomor.includes(c))listNomor.push(c);});
+  inp.value=''; renderAwal();
+}
+function pasteBanyak(){
+  let t=prompt("Paste nomor (boleh koma/spasi):"); if(!t)return;
+  t.split(/[\n,; ]+/).forEach(v=>{let c=bersihkan(v);if(c&&!listNomor.includes(c))listNomor.push(c);});
+  renderAwal();
+}
+function renderAwal(){
+  let h=document.getElementById('hasil'); h.innerHTML='';
+  listNomor.forEach(c=>{h.innerHTML+=`<div class="card" id="card-${c}"><b>${c}</b><br><span>Belum dicek</span></div>`;});
+}
+
+async function cekReal(){
+  if(listNomor.length==0){alert('Tambah nomor dulu');return;}
+  for(let clean of listNomor){
+    let card=document.getElementById(`card-${clean}`);
+    card.innerHTML=`<b>${clean}</b><br><span class="loading">⏳ Sedang ngecek...</span>`;
+    
+    try{
+      // Pakai cors proxy biar bisa baca isi wa.me
+      let proxy=`https://api.allorigins.win/get?url=${encodeURIComponent('https://wa.me/'+clean)}`;
+      let res=await fetch(proxy);
+      let data=await res.json();
+      let html=data.contents;
+
+      let tidakTerdaftar = html.includes('Invalid phone number') || html.includes('not a valid') || html.includes('nomor telepon tidak valid');
+
+      if(tidakTerdaftar){
+        card.innerHTML=`<b>${clean}</b><br><span class="tidak">❌ TIDAK TERDAFTAR di WA</span><br><small>Nomor asal / tidak ada WA</small>`;
+      }else{
+        card.innerHTML=`<b>${clean}</b><br><span class="terdaftar">✅ TERDAFTAR di WA</span><br><a href="https://wa.me/${clean}" target="_blank" style="color:#25D366">Buka Chat ↗</a>`;
+      }
+    }catch(e){
+      card.innerHTML=`<b>${clean}</b><br><span class="loading">Gagal cek, klik manual:</span><br><a href="https://wa.me/${clean}" target="_blank" style="color:#25D366">Cek di wa.me ↗</a>`;
+    }
+    await new Promise(r=>setTimeout(r,800)); // jeda biar gak kena blok
+  }
+}
+</script>
+</body>
+</html>
